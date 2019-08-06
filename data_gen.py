@@ -34,7 +34,7 @@ def TextAudioCollate(batch):
 class LJSpeechDataset(Dataset):
     def __init__(self, args, split):
         self.args = args
-        with open(meta_file, 'r') as file:
+        with open(meta_file, 'r', encoding='utf-8') as file:
             lines = file.readlines()
 
         self.lines = lines
@@ -45,12 +45,12 @@ class LJSpeechDataset(Dataset):
         tokens = line.split('|')
         wave = tokens[0]
         wave = os.path.join(wave_folder, wave + '.wav')
-        trn = tokens[1:]
+        trn = [text.strip() for text in tokens[1:]]
 
         return wave, trn
 
     def __len__(self):
-        return len(self.samples)
+        return len(self.lines)
 
 
 if __name__ == "__main__":
