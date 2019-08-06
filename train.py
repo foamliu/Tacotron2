@@ -4,13 +4,11 @@ from tensorboardX import SummaryWriter
 # from torch import nn
 from tqdm import tqdm
 
-from config import device, print_freq, vocab_size, sos_id, eos_id
-from data_gen import AiShellDataset, pad_collate
-from transformer.decoder import Decoder
-from transformer.encoder import Encoder
-from transformer.loss import cal_performance
-from transformer.optimizer import TransformerOptimizer
-from transformer.transformer import Transformer
+from config import device, print_freq
+from data_gen import LJSpeechDataset, TextAudioCollate
+from models.loss import FeaturePredictNetLoss
+from models.models import FeaturePredictNet
+from models.optimizer import Tacotron2Optimizer
 from utils import parse_args, save_checkpoint, AverageMeter, get_logger
 
 
@@ -26,23 +24,14 @@ def train_net(args):
     # Initialize / load checkpoint
     if checkpoint is None:
         # model
-        encoder = Encoder(args.d_input * args.LFR_m, args.n_layers_enc, args.n_head,
-                          args.d_k, args.d_v, args.d_model, args.d_inner,
-                          dropout=args.dropout, pe_maxlen=args.pe_maxlen)
-        decoder = Decoder(sos_id, eos_id, vocab_size,
-                          args.d_word_vec, args.n_layers_dec, args.n_head,
-                          args.d_k, args.d_v, args.d_model, args.d_inner,
-                          dropout=args.dropout,
-                          tgt_emb_prj_weight_sharing=args.tgt_emb_prj_weight_sharing,
-                          pe_maxlen=args.pe_maxlen)
-        model = Transformer(encoder, decoder)
+        model = FeaturePredictNet()
         # print(model)
         # model = nn.DataParallel(model)
 
         # optimizer = torch.optim.Adam(model.parameters(), betas=(0.9, 0.98), eps=1e-09)
 
         # optimizer
-        optimizer = TransformerOptimizer(
+        optimizer = Tacotron2Optimizer(
             torch.optim.Adam(model.parameters(), betas=(0.9, 0.98), eps=1e-09),
             args.k,
             args.d_model,
@@ -60,11 +49,15 @@ def train_net(args):
     # Move to GPU, if available
     model = model.to(device)
 
+    criterion = FeaturePredictNetLoss()
+
+    collate_fn = TextAudioCollate()
+
     # Custom dataloaders
-    train_dataset = AiShellDataset(args, 'train')
+    train_dataset = LJSpeechDataset(args, 'train')
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, collate_fn=pad_collate,
                                                pin_memory=True, shuffle=True, num_workers=args.num_workers)
-    valid_dataset = AiShellDataset(args, 'dev')
+    valid_dataset = LJSpeechDataset(args, 'dev')
     valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=args.batch_size, collate_fn=pad_collate,
                                                pin_memory=True, shuffle=False, num_workers=args.num_workers)
 
@@ -111,14 +104,18 @@ def train(train_loader, model, optimizer, epoch, logger):
     # Batches
     for i, (data) in enumerate(train_loader):
         # Move to GPU, if available
-        padded_input, padded_target, input_lengths = data
-        padded_input = padded_input.to(device)
-        padded_target = padded_target.to(device)
+        text_padded, input_lengths, feat_padded, stop_token_padded, encoder_mask, decoder_mask = data
+        text_padded = text_padded.to(device)
         input_lengths = input_lengths.to(device)
+        feat_padded = feat_padded.to(device)
+        stop_token_padded = stop_token_padded.to(device)
+        encoder_mask = encoder_mask.to(device)
+        decoder_mask = decoder_mask.to(device)
 
         # Forward prop.
-        pred, gold = model(padded_input, input_lengths, padded_target)
-        loss, n_correct = cal_performance(pred, gold, smoothing=args.label_smoothing)
+        y_pred = model(text_padded, input_lengths, feat_padded, encoder_mask, decoder_mask)
+        y_target = (feat_padded, stop_token_padded)
+        loss = criterion(y_pred, y_target)
 
         # Back prop.
         optimizer.zero_grad()
