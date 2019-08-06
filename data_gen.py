@@ -1,10 +1,10 @@
-import pickle
+import os
 
 import numpy as np
 from torch.utils.data import Dataset
 from torch.utils.data.dataloader import default_collate
 
-from utils import extract_feature
+from config import meta_file, wave_folder
 
 
 def TextAudioCollate(batch):
@@ -34,20 +34,20 @@ def TextAudioCollate(batch):
 class LJSpeechDataset(Dataset):
     def __init__(self, args, split):
         self.args = args
-        with open(pickle_file, 'rb') as file:
-            data = pickle.load(file)
+        with open(meta_file, 'r') as file:
+            lines = file.readlines()
 
-        self.samples = data[split]
-        print('loading {} {} samples...'.format(len(self.samples), split))
+        self.lines = lines
+        print('loading {} {} samples...'.format(len(self.lines), split))
 
     def __getitem__(self, i):
-        sample = self.samples[i]
-        wave = sample['wave']
-        trn = sample['trn']
+        line = self.lines[i]
+        tokens = line.split('|')
+        wave = tokens[0]
+        wave = os.path.join(wave_folder, wave + '.wav')
+        trn = tokens[1:]
 
-        feature = extract_feature(input_file=wave, feature='fbank', dim=self.args.d_input, cmvn=True)
-
-        return feature, trn
+        return wave, trn
 
     def __len__(self):
         return len(self.samples)
@@ -56,38 +56,9 @@ class LJSpeechDataset(Dataset):
 if __name__ == "__main__":
     import torch
     from utils import parse_args
-    from tqdm import tqdm
 
     args = parse_args()
     train_dataset = LJSpeechDataset(args, 'train')
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=args.num_workers,
-                                               collate_fn=pad_collate)
-    #
-    # print(len(train_dataset))
-    # print(len(train_loader))
-    #
-    # feature = train_dataset[10][0]
-    # print(feature.shape)
-    #
-    # trn = train_dataset[10][1]
-    # print(trn)
-    #
-    # with open(pickle_file, 'rb') as file:
-    #     data = pickle.load(file)
-    # IVOCAB = data['IVOCAB']
-    #
-    # print([IVOCAB[idx] for idx in trn])
-    #
-    # for data in train_loader:
-    #     print(data)
-    #     break
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True)
 
-    max_len = 0
-
-    for data in tqdm(train_loader):
-        feature = data[0]
-        # print(feature.shape)
-        if feature.shape[1] > max_len:
-            max_len = feature.shape[1]
-
-    print('max_len: ' + str(max_len))
+    print(train_dataset[0])
