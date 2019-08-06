@@ -83,7 +83,8 @@ def parse_args():
     # optimizer
     parser.add_argument('--lr', default=1e-3, type=float, help='Init learning rate')
     parser.add_argument('--l2', default=0.0, type=float, help='weight decay (L2)')
-
+    # logging
+    parser.add_argument('--print_freq', default=10, type=int, help='Frequency of printing training infomation')
     parser.add_argument('--checkpoint', type=str, default=None, help='checkpoint')
     args = parser.parse_args()
     return args

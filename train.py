@@ -4,7 +4,7 @@ from tensorboardX import SummaryWriter
 # from torch import nn
 from tqdm import tqdm
 
-from config import device, print_freq
+from config import device
 from data_gen import LJSpeechDataset, TextAudioCollate
 from models.loss import FeaturePredictNetLoss
 from models.models import FeaturePredictNet
@@ -55,10 +55,10 @@ def train_net(args):
 
     # Custom dataloaders
     train_dataset = LJSpeechDataset(args, 'train')
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, collate_fn=pad_collate,
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, collate_fn=collate_fn,
                                                pin_memory=True, shuffle=True, num_workers=args.num_workers)
     valid_dataset = LJSpeechDataset(args, 'dev')
-    valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=args.batch_size, collate_fn=pad_collate,
+    valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=args.batch_size, collate_fn=collate_fn,
                                                pin_memory=True, shuffle=False, num_workers=args.num_workers)
 
     # Epochs
@@ -67,6 +67,7 @@ def train_net(args):
         train_loss = train(train_loader=train_loader,
                            model=model,
                            optimizer=optimizer,
+                           criterion=criterion,
                            epoch=epoch,
                            logger=logger)
         writer.add_scalar('Train_Loss', train_loss, epoch)
@@ -80,6 +81,7 @@ def train_net(args):
         # One epoch's validation
         valid_loss = valid(valid_loader=valid_loader,
                            model=model,
+                           criterion=criterion,
                            logger=logger)
         writer.add_scalar('Valid_Loss', valid_loss, epoch)
 
@@ -96,7 +98,7 @@ def train_net(args):
         save_checkpoint(epoch, epochs_since_improvement, model, optimizer, best_loss, is_best)
 
 
-def train(train_loader, model, optimizer, epoch, logger):
+def train(train_loader, model, optimizer, criterion, epoch, logger):
     model.train()  # train mode (dropout and batchnorm is used)
 
     losses = AverageMeter()
@@ -128,14 +130,14 @@ def train(train_loader, model, optimizer, epoch, logger):
         losses.update(loss.item())
 
         # Print status
-        if i % print_freq == 0:
+        if i % args.print_freq == 0:
             logger.info('Epoch: [{0}][{1}/{2}]\t'
                         'Loss {loss.val:.4f} ({loss.avg:.4f})'.format(epoch, i, len(train_loader), loss=losses))
 
     return losses.avg
 
 
-def valid(valid_loader, model, logger):
+def valid(valid_loader, model, criterion, logger):
     model.eval()
 
     losses = AverageMeter()
@@ -143,15 +145,18 @@ def valid(valid_loader, model, logger):
     # Batches
     for data in tqdm(valid_loader):
         # Move to GPU, if available
-        padded_input, padded_target, input_lengths = data
-        padded_input = padded_input.to(device)
-        padded_target = padded_target.to(device)
+        text_padded, input_lengths, feat_padded, stop_token_padded, encoder_mask, decoder_mask = data
+        text_padded = text_padded.to(device)
         input_lengths = input_lengths.to(device)
+        feat_padded = feat_padded.to(device)
+        stop_token_padded = stop_token_padded.to(device)
+        encoder_mask = encoder_mask.to(device)
+        decoder_mask = decoder_mask.to(device)
 
-        with torch.no_grad():
-            # Forward prop.
-            pred, gold = model(padded_input, input_lengths, padded_target)
-            loss, n_correct = cal_performance(pred, gold, smoothing=args.label_smoothing)
+        # Forward prop.
+        y_pred = model(text_padded, input_lengths, feat_padded, encoder_mask, decoder_mask)
+        y_target = (feat_padded, stop_token_padded)
+        loss = criterion(y_pred, y_target)
 
         # Keep track of metrics
         losses.update(loss.item())
