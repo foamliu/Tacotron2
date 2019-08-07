@@ -8,10 +8,10 @@ class Tacotron2Optimizer(object):
         self.optimizer = optimizer
         self.max_lr = max_lr
         self.min_lr = min_lr
-        self.lr = self.max_lr * np.exp(-1.0 * self.k * self.step_num)
         self.warmup_steps = warmup_steps
         self.k = k
         self.step_num = 0
+        self.lr = self.max_lr * np.exp(-1.0 * self.k * self.step_num)
 
     def zero_grad(self):
         self.optimizer.zero_grad()
