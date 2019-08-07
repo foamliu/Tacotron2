@@ -66,3 +66,4 @@ postnet_n_convolutions = 5
 learning_rate = 1e-3
 weight_decay = 1e-6
 batch_size = 64
+mask_padding = True  # set model's padded outputs to padded values
