@@ -22,10 +22,10 @@ class Tacotron2Optimizer(object):
     def _update_lr(self):
         self.step_num += 1
         if self.step_num > self.warmup_steps:
-            lr = self.max_lr * np.exp(-1.0 * self.k * self.step_num)
-            if lr >= self.min_lr:
+            self.lr = self.max_lr * np.exp(-1.0 * self.k * self.step_num)
+            if self.lr >= self.min_lr:
                 for param_group in self.optimizer.param_groups:
-                    param_group['lr'] = lr
+                    param_group['lr'] = self.lr
 
     def load_state_dict(self, state_dict):
         self.optimizer.load_state_dict(state_dict)
