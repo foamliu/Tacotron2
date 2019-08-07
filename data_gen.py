@@ -1,11 +1,11 @@
 import random
 
-import layers
 import numpy as np
 import torch
 import torch.utils.data
-from text import text_to_sequence
 
+from models import layers
+from text import text_to_sequence
 from utils import load_wav_to_torch, load_filepaths_and_text
 
 
