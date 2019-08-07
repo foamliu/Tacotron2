@@ -37,6 +37,7 @@ class TextMelLoader(torch.utils.data.Dataset):
         return (text, mel)
 
     def get_mel(self, filename):
+        print(self.load_mel_from_disk)
         if not self.load_mel_from_disk:
             audio, sampling_rate = load_wav_to_torch(filename)
             if sampling_rate != self.stft.sampling_rate:
