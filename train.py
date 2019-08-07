@@ -103,20 +103,14 @@ def train(train_loader, model, optimizer, criterion, epoch, logger):
     losses = AverageMeter()
 
     # Batches
-    for i, (data) in enumerate(train_loader):
-        # Move to GPU, if available
-        text_padded, input_lengths, feat_padded, stop_token_padded, encoder_mask, decoder_mask = data
-        text_padded = text_padded.to(device)
-        input_lengths = input_lengths.to(device)
-        feat_padded = feat_padded.to(device)
-        stop_token_padded = stop_token_padded.to(device)
-        encoder_mask = encoder_mask.to(device)
-        decoder_mask = decoder_mask.to(device)
+    for i, batch in enumerate(train_loader):
+        model.zero_grad()
+        x, y = model.parse_batch(batch)
 
         # Forward prop.
-        y_pred = model(text_padded, input_lengths, feat_padded, encoder_mask, decoder_mask)
-        y_target = (feat_padded, stop_token_padded)
-        loss = criterion(y_pred, y_target)
+        y_pred = model(x)
+
+        loss = criterion(y_pred, y)
 
         # Back prop.
         optimizer.zero_grad()
@@ -142,20 +136,14 @@ def valid(valid_loader, model, criterion, logger):
     losses = AverageMeter()
 
     # Batches
-    for data in tqdm(valid_loader):
-        # Move to GPU, if available
-        text_padded, input_lengths, feat_padded, stop_token_padded, encoder_mask, decoder_mask = data
-        text_padded = text_padded.to(device)
-        input_lengths = input_lengths.to(device)
-        feat_padded = feat_padded.to(device)
-        stop_token_padded = stop_token_padded.to(device)
-        encoder_mask = encoder_mask.to(device)
-        decoder_mask = decoder_mask.to(device)
+    for batch in tqdm(valid_loader):
+        model.zero_grad()
+        x, y = model.parse_batch(batch)
 
         # Forward prop.
-        y_pred = model(text_padded, input_lengths, feat_padded, encoder_mask, decoder_mask)
-        y_target = (feat_padded, stop_token_padded)
-        loss = criterion(y_pred, y_target)
+        y_pred = model(x)
+
+        loss = criterion(y_pred, y)
 
         # Keep track of metrics
         losses.update(loss.item())
