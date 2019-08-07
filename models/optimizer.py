@@ -1,12 +1,16 @@
+import numpy as np
+
+
 class Tacotron2Optimizer(object):
     """A simple wrapper class for learning rate scheduling"""
 
-    def __init__(self, optimizer, k, warmup_steps=4000):
+    def __init__(self, optimizer, max_lr=1e-3, min_lr=1e-5, warmup_steps=50000, k=0.01):
         self.optimizer = optimizer
-        self.k = k
-        self.init_lr = 0.001
-        self.lr = self.init_lr
+        self.max_lr = max_lr
+        self.min_lr = min_lr
+        self.lr = self.max_lr * np.exp(-1.0 * self.k * self.step_num)
         self.warmup_steps = warmup_steps
+        self.k = k
         self.step_num = 0
 
     def zero_grad(self):
@@ -18,10 +22,8 @@ class Tacotron2Optimizer(object):
 
     def _update_lr(self):
         self.step_num += 1
-        self.lr = self.k * self.init_lr * min(self.step_num ** (-0.5),
-                                              self.step_num * (self.warmup_steps ** (-1.5)))
-        for param_group in self.optimizer.param_groups:
-            param_group['lr'] = self.lr
-
-    def set_k(self, k):
-        self.k = k
+        if self.step_num > self.warmup_steps:
+            self.lr = self.max_lr * np.exp(-1.0 * self.k * self.step_num)
+            if self.lr >= self.min_lr:
+                for param_group in self.optimizer.param_groups:
+                    param_group['lr'] = self.lr
