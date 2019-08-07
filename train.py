@@ -6,8 +6,8 @@ from tqdm import tqdm
 
 from config import device
 from data_gen import LJSpeechDataset, TextAudioCollate
-from models.loss import FeaturePredictNetLoss
-from models.models import FeaturePredictNet
+from models.loss_function import Tacotron2Loss
+from models.models import Tacotron2
 from models.optimizer import Tacotron2Optimizer
 from utils import parse_args, save_checkpoint, AverageMeter, get_logger
 
@@ -24,7 +24,7 @@ def train_net(args):
     # Initialize / load checkpoint
     if checkpoint is None:
         # model
-        model = FeaturePredictNet()
+        model = Tacotron2()
         # print(model)
         # model = nn.DataParallel(model)
 
@@ -49,7 +49,7 @@ def train_net(args):
     # Move to GPU, if available
     model = model.to(device)
 
-    criterion = FeaturePredictNetLoss()
+    criterion = Tacotron2Loss()
 
     collate_fn = TextAudioCollate()
 

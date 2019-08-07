@@ -1,65 +1,114 @@
-import os
+import random
 
+import layers
 import numpy as np
-from torch.utils.data import Dataset
-from torch.utils.data.dataloader import default_collate
-import pandas as pd
-from config import meta_file, wave_folder
+import torch
+import torch.utils.data
+from text import text_to_sequence
+
+from utils import load_wav_to_torch, load_filepaths_and_text
 
 
-def TextAudioCollate(batch):
-    max_input_len = float('-inf')
-    max_target_len = float('-inf')
+class TextMelLoader(torch.utils.data.Dataset):
+    """
+        1) loads audio,text pairs
+        2) normalizes text and converts them to sequences of one-hot vectors
+        3) computes mel-spectrograms from audio files.
+    """
 
-    for elem in batch:
-        feature, trn = elem
-        max_input_len = max_input_len if max_input_len > feature.shape[0] else feature.shape[0]
-        max_target_len = max_target_len if max_target_len > len(trn) else len(trn)
+    def __init__(self, audiopaths_and_text, hparams):
+        self.audiopaths_and_text = load_filepaths_and_text(audiopaths_and_text)
+        self.text_cleaners = hparams.text_cleaners
+        self.max_wav_value = hparams.max_wav_value
+        self.sampling_rate = hparams.sampling_rate
+        self.load_mel_from_disk = hparams.load_mel_from_disk
+        self.stft = layers.TacotronSTFT(
+            hparams.filter_length, hparams.hop_length, hparams.win_length,
+            hparams.n_mel_channels, hparams.sampling_rate, hparams.mel_fmin,
+            hparams.mel_fmax)
+        random.seed(1234)
+        random.shuffle(self.audiopaths_and_text)
 
-    for i, elem in enumerate(batch):
-        feature, trn = elem
-        input_length = feature.shape[0]
-        input_dim = feature.shape[1]
-        padded_input = np.zeros((max_input_len, input_dim), dtype=np.float32)
-        padded_input[:input_length, :] = feature
-        padded_target = np.pad(trn, (0, max_target_len - len(trn)), 'constant', constant_values=IGNORE_ID)
-        batch[i] = (padded_input, padded_target, input_length)
+    def get_mel_text_pair(self, audiopath_and_text):
+        # separate filename and text
+        audiopath, text = audiopath_and_text[0], audiopath_and_text[1]
+        text = self.get_text(text)
+        mel = self.get_mel(audiopath)
+        return (text, mel)
 
-    # sort it by input lengths (long to short)
-    batch.sort(key=lambda x: x[2], reverse=True)
+    def get_mel(self, filename):
+        if not self.load_mel_from_disk:
+            audio, sampling_rate = load_wav_to_torch(filename)
+            if sampling_rate != self.stft.sampling_rate:
+                raise ValueError("{} {} SR doesn't match target {} SR".format(
+                    sampling_rate, self.stft.sampling_rate))
+            audio_norm = audio / self.max_wav_value
+            audio_norm = audio_norm.unsqueeze(0)
+            audio_norm = torch.autograd.Variable(audio_norm, requires_grad=False)
+            melspec = self.stft.mel_spectrogram(audio_norm)
+            melspec = torch.squeeze(melspec, 0)
+        else:
+            melspec = torch.from_numpy(np.load(filename))
+            assert melspec.size(0) == self.stft.n_mel_channels, (
+                'Mel dimension mismatch: given {}, expected {}'.format(
+                    melspec.size(0), self.stft.n_mel_channels))
 
-    return default_collate(batch)
+        return melspec
 
+    def get_text(self, text):
+        text_norm = torch.IntTensor(text_to_sequence(text, self.text_cleaners))
+        return text_norm
 
-class LJSpeechDataset(Dataset):
-    def __init__(self, args, split):
-        self.args = args
-        with open(meta_file, 'r', encoding='utf-8') as file:
-            lines = file.readlines()
-
-        self.lines = lines
-        print('loading {} {} samples...'.format(len(self.lines), split))
-
-    def __getitem__(self, i):
-        line = self.lines[i]
-        tokens = line.split('|')
-        wave = tokens[0]
-        wave = os.path.join(wave_folder, wave + '.wav')
-        trn = [text.strip() for text in tokens[1:]]
-
-        return wave, trn
+    def __getitem__(self, index):
+        return self.get_mel_text_pair(self.audiopaths_and_text[index])
 
     def __len__(self):
-        return len(self.lines)
+        return len(self.audiopaths_and_text)
 
 
-if __name__ == "__main__":
-    import torch
-    from utils import parse_args
+class TextMelCollate():
+    """ Zero-pads model inputs and targets based on number of frames per setep
+    """
 
-    args = parse_args()
-    train_dataset = LJSpeechDataset(args, 'train')
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True)
+    def __init__(self, n_frames_per_step):
+        self.n_frames_per_step = n_frames_per_step
 
-    print(train_dataset[0])
-    print(len(train_dataset))
+    def __call__(self, batch):
+        """Collate's training batch from normalized text and mel-spectrogram
+        PARAMS
+        ------
+        batch: [text_normalized, mel_normalized]
+        """
+        # Right zero-pad all one-hot text sequences to max input length
+        input_lengths, ids_sorted_decreasing = torch.sort(
+            torch.LongTensor([len(x[0]) for x in batch]),
+            dim=0, descending=True)
+        max_input_len = input_lengths[0]
+
+        text_padded = torch.LongTensor(len(batch), max_input_len)
+        text_padded.zero_()
+        for i in range(len(ids_sorted_decreasing)):
+            text = batch[ids_sorted_decreasing[i]][0]
+            text_padded[i, :text.size(0)] = text
+
+        # Right zero-pad mel-spec
+        num_mels = batch[0][1].size(0)
+        max_target_len = max([x[1].size(1) for x in batch])
+        if max_target_len % self.n_frames_per_step != 0:
+            max_target_len += self.n_frames_per_step - max_target_len % self.n_frames_per_step
+            assert max_target_len % self.n_frames_per_step == 0
+
+        # include mel padded and gate padded
+        mel_padded = torch.FloatTensor(len(batch), num_mels, max_target_len)
+        mel_padded.zero_()
+        gate_padded = torch.FloatTensor(len(batch), max_target_len)
+        gate_padded.zero_()
+        output_lengths = torch.LongTensor(len(batch))
+        for i in range(len(ids_sorted_decreasing)):
+            mel = batch[ids_sorted_decreasing[i]][1]
+            mel_padded[i, :, :mel.size(1)] = mel
+            gate_padded[i, mel.size(1) - 1:] = 1
+            output_lengths[i] = mel.size(1)
+
+        return text_padded, input_lengths, mel_padded, gate_padded, \
+               output_lengths
