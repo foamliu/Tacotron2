@@ -30,8 +30,7 @@ def train_net(args):
 
         # optimizer
         optimizer = Tacotron2Optimizer(
-            torch.optim.Adam(model.parameters(), lr=config.learning_rate,
-                             weight_decay=config.weight_decay))
+            torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2, betas=(0.9, 0.999), eps=1e-6))
 
     else:
         checkpoint = torch.load(checkpoint)

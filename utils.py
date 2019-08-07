@@ -82,12 +82,14 @@ def parse_args():
     parser.add_argument('--epochs', default=500, type=int)
     parser.add_argument('--max_norm', default=1, type=float, help='Gradient norm threshold to clip')
     # minibatch
-    parser.add_argument('--batch_size', default=32, type=int)
+    parser.add_argument('--batch_size', default=16, type=int)
     parser.add_argument('--num-workers', default=4, type=int,
                         help='Number of workers to generate minibatch')
     # logging
     parser.add_argument('--print_freq', default=10, type=int, help='Frequency of printing training infomation')
     # optimizer
+    parser.add_argument('--lr', default=1e-3, type=float, help='Init learning rate')
+    parser.add_argument('--l2', default=1e-6, type=float, help='weight decay (L2)')
     parser.add_argument('--k', default=0.2, type=float,
                         help='tunable scalar multiply to learning rate')
     parser.add_argument('--warmup_steps', default=4000, type=int,

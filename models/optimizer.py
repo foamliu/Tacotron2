@@ -4,7 +4,7 @@ import numpy as np
 class Tacotron2Optimizer(object):
     """A simple wrapper class for learning rate scheduling"""
 
-    def __init__(self, optimizer, max_lr=1e-3, min_lr=1e-5, warmup_steps=50000, k=0.01):
+    def __init__(self, optimizer, max_lr=1e-3, min_lr=1e-6, warmup_steps=50000, k=0.01):
         self.optimizer = optimizer
         self.max_lr = max_lr
         self.min_lr = min_lr
