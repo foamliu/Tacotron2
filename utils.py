@@ -86,6 +86,12 @@ def parse_args():
     parser.add_argument('--l2', default=0.0, type=float, help='weight decay (L2)')
     # logging
     parser.add_argument('--print_freq', default=10, type=int, help='Frequency of printing training infomation')
+    # optimizer
+    parser.add_argument('--k', default=0.2, type=float,
+                        help='tunable scalar multiply to learning rate')
+    parser.add_argument('--warmup_steps', default=4000, type=int,
+                        help='warmup steps')
+
     parser.add_argument('--checkpoint', type=str, default=None, help='checkpoint')
     args = parser.parse_args()
     return args
