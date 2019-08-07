@@ -33,7 +33,6 @@ def train_net(args):
             torch.optim.Adam(model.parameters(), lr=config.learning_rate,
                              weight_decay=config.weight_decay),
             args.k,
-            config.symbols_embedding_dim,
             args.warmup_steps)
 
     else:

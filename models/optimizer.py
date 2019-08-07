@@ -1,10 +1,10 @@
 class Tacotron2Optimizer(object):
     """A simple wrapper class for learning rate scheduling"""
 
-    def __init__(self, optimizer, k, embedding_dim, warmup_steps=4000):
+    def __init__(self, optimizer, k, warmup_steps=4000):
         self.optimizer = optimizer
         self.k = k
-        self.init_lr = embedding_dim ** (-0.5)
+        self.init_lr = 0.001
         self.lr = self.init_lr
         self.warmup_steps = warmup_steps
         self.step_num = 0
