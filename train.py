@@ -4,8 +4,8 @@ from tensorboardX import SummaryWriter
 # from torch import nn
 from tqdm import tqdm
 
-from config import device
-from data_gen import LJSpeechDataset, TextAudioCollate
+import config
+from data_gen import TextMelLoader, TextMelCollate
 from models.loss_function import Tacotron2Loss
 from models.models import Tacotron2
 from models.optimizer import Tacotron2Optimizer
@@ -24,15 +24,14 @@ def train_net(args):
     # Initialize / load checkpoint
     if checkpoint is None:
         # model
-        model = Tacotron2()
-        # print(model)
+        model = Tacotron2(config)
+        print(model)
         # model = nn.DataParallel(model)
-
-        # optimizer = torch.optim.Adam(model.parameters(), betas=(0.9, 0.98), eps=1e-09)
 
         # optimizer
         optimizer = Tacotron2Optimizer(
-            torch.optim.Adam(model.parameters(), betas=(0.9, 0.98), eps=1e-09),
+            torch.optim.Adam(model.parameters(), lr=config.learning_rate,
+                             weight_decay=config.weight_decay),
             args.k,
             args.d_model,
             args.warmup_steps)
@@ -47,17 +46,17 @@ def train_net(args):
     logger = get_logger()
 
     # Move to GPU, if available
-    model = model.to(device)
+    model = model.to(config.device)
 
     criterion = Tacotron2Loss()
 
-    collate_fn = TextAudioCollate()
+    collate_fn = TextMelCollate(config.n_frames_per_step)
 
     # Custom dataloaders
-    train_dataset = LJSpeechDataset(args, 'train')
+    train_dataset = TextMelLoader(config.training_files, config)
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, collate_fn=collate_fn,
                                                pin_memory=True, shuffle=True, num_workers=args.num_workers)
-    valid_dataset = LJSpeechDataset(args, 'dev')
+    valid_dataset = TextMelLoader(config.validation_files, config)
     valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=args.batch_size, collate_fn=collate_fn,
                                                pin_memory=True, shuffle=False, num_workers=args.num_workers)
 
