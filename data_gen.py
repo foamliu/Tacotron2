@@ -62,3 +62,4 @@ if __name__ == "__main__":
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True)
 
     print(train_dataset[0])
+    print(len(train_dataset))
