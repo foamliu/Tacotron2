@@ -8,6 +8,16 @@ meta_file = 'data/LJSpeech-1.1/metadata.csv'
 wave_folder = 'data/LJSpeech-1.1/wavs'
 
 ################################
+# Experiment Parameters        #
+################################
+epochs = 500
+iters_per_checkpoint = 1000
+seed = 1234
+dynamic_loss_scaling = True
+fp16_run = False
+distributed_run = False
+
+################################
 # Data Parameters             #
 ################################
 load_mel_from_disk = False,
