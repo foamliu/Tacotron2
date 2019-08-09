@@ -1,6 +1,6 @@
-import librosa
 import matplotlib.pylab as plt
 import numpy as np
+import soundfile as sf
 import torch
 
 from config import sampling_rate
@@ -83,4 +83,4 @@ if __name__ == '__main__':
     print('audio.shape: ' + str(audio.shape))
     print(audio)
 
-    librosa.output.write_wav('output.wav', audio, sampling_rate, norm=False)
+    sf.write('output.wav', audio, sampling_rate, 'PCM_24')

@@ -2,3 +2,4 @@ librosa
 inflect
 tensorboardX
 unidecode
+soundfile
