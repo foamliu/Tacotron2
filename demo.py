@@ -32,4 +32,4 @@ if __name__ == '__main__':
     plot_data((mel_outputs.float().data.cpu().numpy()[0],
                mel_outputs_postnet.float().data.cpu().numpy()[0],
                alignments.float().data.cpu().numpy()[0].T))
-    plt.savefig('mel_spec.jpg')
+    plt.savefig('images/mel_spec.jpg')
