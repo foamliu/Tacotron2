@@ -79,6 +79,7 @@ if __name__ == '__main__':
         audio = waveglow.infer(mel_outputs_postnet, sigma=0.666)
 
     audio = audio[0].data.cpu().numpy()
+    audio = audio.astype(np.float32)
 
     print('audio.shape: ' + str(audio.shape))
     print(audio)
