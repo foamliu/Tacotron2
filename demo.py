@@ -3,6 +3,7 @@ import matplotlib.pylab as plt
 import numpy as np
 import torch
 
+from config import sampling_rate
 from models.layers import STFT
 from text import text_to_sequence
 
@@ -62,8 +63,6 @@ if __name__ == '__main__':
     for k in waveglow.convinv:
         k.float()
     denoiser = Denoiser(waveglow)
-
-    sampling_rate = 22050
 
     text = "Waveglow is really awesome!"
     sequence = np.array(text_to_sequence(text, ['english_cleaners']))[None, :]
