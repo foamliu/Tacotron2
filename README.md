@@ -29,7 +29,8 @@ $ tensorboard --logdir runs
 ```
 
 ### Demo
-Pick 10 random test examples from test set:
+Generate mel-spectrogram for text "Waveglow is really awesome!"
 ```bash
 $ python demo.py
 ```
+![image](https://github.com/foamliu/Tacotron2/raw/master/images/mel_spec.jpg)
