@@ -81,5 +81,6 @@ if __name__ == '__main__':
     audio = audio[0].data.cpu().numpy()
 
     print('audio.shape: ' + str(audio.shape))
+    print(audio)
 
     librosa.output.write_wav('output.wav', audio, sampling_rate, norm=False)
