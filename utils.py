@@ -90,11 +90,8 @@ def parse_args():
     # optimizer
     parser.add_argument('--lr', default=1e-3, type=float, help='Init learning rate')
     parser.add_argument('--l2', default=1e-6, type=float, help='weight decay (L2)')
-    parser.add_argument('--k', default=0.2, type=float,
-                        help='tunable scalar multiply to learning rate')
-    parser.add_argument('--warmup_steps', default=4000, type=int,
-                        help='warmup steps')
-
+    parser.add_argument('--half_lr', dest='half_lr', default=True, type=bool,
+                        help='Halving learning rate when get small improvement')
     parser.add_argument('--checkpoint', type=str, default=None, help='checkpoint')
     args = parser.parse_args()
     return args
