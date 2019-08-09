@@ -1,12 +1,46 @@
-import sys
-
+import librosa
 import matplotlib.pylab as plt
-
-sys.path.append('waveglow/')
 import numpy as np
 import torch
 
+from models.layers import STFT
 from text import text_to_sequence
+
+
+class Denoiser(torch.nn.Module):
+    """ Removes model bias from audio produced with waveglow """
+
+    def __init__(self, waveglow, filter_length=1024, n_overlap=4,
+                 win_length=1024, mode='zeros'):
+        super(Denoiser, self).__init__()
+        self.stft = STFT(filter_length=filter_length,
+                         hop_length=int(filter_length / n_overlap),
+                         win_length=win_length).cuda()
+        if mode == 'zeros':
+            mel_input = torch.zeros(
+                (1, 80, 88),
+                dtype=waveglow.upsample.weight.dtype,
+                device=waveglow.upsample.weight.device)
+        elif mode == 'normal':
+            mel_input = torch.randn(
+                (1, 80, 88),
+                dtype=waveglow.upsample.weight.dtype,
+                device=waveglow.upsample.weight.device)
+        else:
+            raise Exception("Mode {} if not supported".format(mode))
+
+        with torch.no_grad():
+            bias_audio = waveglow.infer(mel_input, sigma=0.0).float()
+            bias_spec, _ = self.stft.transform(bias_audio)
+
+        self.register_buffer('bias_spec', bias_spec[:, :, 0][:, :, None])
+
+    def forward(self, audio, strength=0.1):
+        audio_spec, audio_angles = self.stft.transform(audio.cuda().float())
+        audio_spec_denoised = audio_spec - self.bias_spec * strength
+        audio_spec_denoised = torch.clamp(audio_spec_denoised, 0.0)
+        audio_denoised = self.stft.inverse(audio_spec_denoised, audio_angles)
+        return audio_denoised
 
 
 def plot_data(data, figsize=(16, 4)):
@@ -22,6 +56,13 @@ if __name__ == '__main__':
     model = checkpoint['model']
     model.eval()
 
+    waveglow_path = 'waveglow_256channels.pt'
+    waveglow = torch.load(waveglow_path)['model']
+    waveglow.cuda().eval().half()
+    for k in waveglow.convinv:
+        k.float()
+    denoiser = Denoiser(waveglow)
+
     sampling_rate = 22050
 
     text = "Waveglow is really awesome!"
@@ -33,3 +74,8 @@ if __name__ == '__main__':
                mel_outputs_postnet.float().data.cpu().numpy()[0],
                alignments.float().data.cpu().numpy()[0].T))
     plt.savefig('images/mel_spec.jpg')
+
+    with torch.no_grad():
+        audio = waveglow.infer(mel_outputs_postnet, sigma=0.666)
+
+    librosa.output.write_wav('output.wav', audio, sampling_rate, norm=False)
