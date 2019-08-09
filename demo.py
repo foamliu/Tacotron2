@@ -64,7 +64,7 @@ if __name__ == '__main__':
         k.float()
     denoiser = Denoiser(waveglow)
 
-    text = "Waveglow is really awesome!"
+    text = "I like deep learning. Jesus is coming, look busy!"
     sequence = np.array(text_to_sequence(text, ['english_cleaners']))[None, :]
     sequence = torch.autograd.Variable(torch.from_numpy(sequence)).cuda().long()
 
