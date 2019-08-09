@@ -79,4 +79,4 @@ if __name__ == '__main__':
     with torch.no_grad():
         audio = waveglow.infer(mel_outputs_postnet, sigma=0.666)
 
-    librosa.output.write_wav('output.wav', audio, sampling_rate, norm=False)
+    librosa.output.write_wav('output.wav', audio[0].data.cpu().numpy(), sampling_rate, norm=False)
