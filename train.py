@@ -8,6 +8,7 @@ import config
 from data_gen import TextMelLoader, TextMelCollate
 from models.loss_function import Tacotron2Loss
 from models.models import Tacotron2
+from models.optimizer import Tacotron2Optimizer
 from utils import parse_args, save_checkpoint, AverageMeter, get_logger
 
 
@@ -28,7 +29,8 @@ def train_net(args):
         # model = nn.DataParallel(model)
 
         # optimizer
-        optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2, betas=(0.9, 0.999), eps=1e-6)
+        optimizer = Tacotron2Optimizer(
+            torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2, betas=(0.9, 0.999), eps=1e-6))
 
     else:
         checkpoint = torch.load(checkpoint)
@@ -56,10 +58,6 @@ def train_net(args):
 
     # Epochs
     for epoch in range(start_epoch, args.epochs):
-        # Halving learning rate when get small improvement
-        # if args.half_lr and epochs_since_improvement > 0 and epochs_since_improvement % 2 == 0:
-        #     adjust_learning_rate(optimizer, 0.5)
-
         # One epoch's training
         train_loss = train(train_loader=train_loader,
                            model=model,
@@ -68,6 +66,12 @@ def train_net(args):
                            epoch=epoch,
                            logger=logger)
         writer.add_scalar('Train_Loss', train_loss, epoch)
+
+        lr = optimizer.lr
+        print('\nLearning rate: {}'.format(lr))
+        writer.add_scalar('Learning_Rate', lr, epoch)
+        step_num = optimizer.step_num
+        print('Step num: {}\n'.format(step_num))
 
         # One epoch's validation
         valid_loss = valid(valid_loader=valid_loader,
