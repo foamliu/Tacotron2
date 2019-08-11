@@ -8,7 +8,7 @@ import config
 from data_gen import TextMelLoader, TextMelCollate
 from models.loss_function import Tacotron2Loss
 from models.models import Tacotron2
-from utils import parse_args, save_checkpoint, AverageMeter, get_logger, adjust_learning_rate
+from utils import parse_args, save_checkpoint, AverageMeter, get_logger
 
 
 def train_net(args):
@@ -57,8 +57,8 @@ def train_net(args):
     # Epochs
     for epoch in range(start_epoch, args.epochs):
         # Halving learning rate when get small improvement
-        if args.half_lr and epochs_since_improvement > 0 and epochs_since_improvement % 2 == 0:
-            adjust_learning_rate(optimizer, 0.5)
+        # if args.half_lr and epochs_since_improvement > 0 and epochs_since_improvement % 2 == 0:
+        #     adjust_learning_rate(optimizer, 0.5)
 
         # One epoch's training
         train_loss = train(train_loader=train_loader,
