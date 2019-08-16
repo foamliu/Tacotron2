@@ -64,7 +64,7 @@ if __name__ == '__main__':
         k.float()
     denoiser = Denoiser(waveglow)
 
-    text = "You, me, or nobody is gonna hit as hard as life. But it ain’t about how hard you hit. It’s about how hard you can get hit and keep moving forward."
+    text = "You, me, or nobody is gonna hit as hard as life. But it is not about how hard you hit. It’s about how hard you can get hit and keep moving forward."
     sequence = np.array(text_to_sequence(text, ['english_cleaners']))[None, :]
     sequence = torch.autograd.Variable(torch.from_numpy(sequence)).cuda().long()
 
