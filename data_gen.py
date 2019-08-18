@@ -110,7 +110,8 @@ class TextMelCollate():
 if __name__ == '__main__':
     import config
     import numpy as np
-    from utils import parse_args, sequence_to_text
+    from utils import parse_args
+    from text import sequence_to_text
 
     args = parse_args()
     collate_fn = TextMelCollate(config.n_frames_per_step)
