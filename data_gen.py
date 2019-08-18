@@ -1,6 +1,5 @@
 import random
 
-import numpy as np
 import torch
 import torch.utils.data
 
@@ -106,3 +105,23 @@ class TextMelCollate():
 
         return text_padded, input_lengths, mel_padded, gate_padded, \
                output_lengths
+
+
+if __name__ == '__main__':
+    import config
+    import numpy as np
+    from utils import parse_args, sequence_to_text
+
+    args = parse_args()
+    collate_fn = TextMelCollate(config.n_frames_per_step)
+    valid_dataset = TextMelLoader(config.validation_files, config)
+    text, mel = valid_dataset[0]
+    text = sequence_to_text(text.numpy().tolist())
+    text = ''.join(text)
+    mel = mel.numpy()
+
+    print('text: ' + str(text))
+    print('mel: ' + str(mel))
+    print('np.mean(mel): ' + str(np.mean(mel)))
+    print('np.max(mel): ' + str(np.max(mel)))
+    print('np.min(mel): ' + str(np.min(mel)))
