@@ -122,6 +122,12 @@ if __name__ == '__main__':
     valid_dataset = TextMelLoader(config.validation_files, config)
     print('len(valid_dataset): ' + str(len(valid_dataset)))
 
+    text_lengths = []
+    mel_lengths = []
+
+    text, mel = valid_dataset[0]
+    print('type(mel): ' + str(type(mel)))
+
     for data in valid_dataset:
         text, mel = data
         text = sequence_to_text(text.numpy().tolist())
@@ -130,6 +136,11 @@ if __name__ == '__main__':
 
         print('text: ' + str(text))
         print('mel.size: ' + str(mel.size))
+        text_lengths.append(len(text))
+        mel_lengths.append(mel.size)
         # print('np.mean(mel): ' + str(np.mean(mel)))
         # print('np.max(mel): ' + str(np.max(mel)))
         # print('np.min(mel): ' + str(np.min(mel)))
+
+    print('np.mean(text_lengths): ' + str(np.mean(text_lengths)))
+    print('np.mean(mel_lengths): ' + str(np.mean(mel_lengths)))
