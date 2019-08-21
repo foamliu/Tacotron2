@@ -74,7 +74,7 @@ if __name__ == '__main__':
                alignments.float().data.cpu().numpy()[0].T))
     plt.savefig('images/mel_spec.jpg')
 
-    np.save('mel_outputs.npy', mel_outputs_postnet)
+    np.save('mel_outputs.npy', mel_outputs_postnet.float().data.cpu().numpy()[0])
 
     mel_outputs_postnet = mel_outputs_postnet.type(torch.float16)
     with torch.no_grad():
