@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
-from config import wave_folder, sampling_rate
+from config import wave_folder, sampling_rate, text_cleaners
 from text import text_to_sequence
 
 
@@ -212,7 +212,7 @@ def test(model, step_num, loss):
     model.eval()
 
     text = "You, me, or nobody is gonna hit as hard as life. But it is not about how hard you hit. It’s about how hard you can get hit and keep moving forward."
-    sequence = np.array(text_to_sequence(text))[None, :]
+    sequence = np.array(text_to_sequence(text, text_cleaners))[None, :]
     sequence = torch.autograd.Variable(torch.from_numpy(sequence)).cuda().long()
     with torch.no_grad():
         mel_outputs, mel_outputs_postnet, _, alignments = model.inference(sequence)
