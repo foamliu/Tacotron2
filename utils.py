@@ -1,12 +1,17 @@
 import argparse
 import logging
 
+import cv2 as cv
 import librosa
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from scipy.io.wavfile import read
 
-from config import wave_folder
+from config import wave_folder, sampling_rate
+from text import text_to_sequence
+
+
+# from scipy.io.wavfile import read
 
 
 def clip_gradient(optimizer, grad_clip):
@@ -176,8 +181,10 @@ def get_mask_from_lengths(lengths):
 
 
 def load_wav_to_torch(full_path):
-    sampling_rate, data = read(full_path)
-    return torch.FloatTensor(data.astype(np.float32)), sampling_rate
+    # sampling_rate, data = read(full_path)
+    y, sr = librosa.core.load(full_path, sampling_rate)
+    yt, _ = librosa.effects.trim(y)
+    return torch.FloatTensor(yt.astype(np.float32)), sr
 
 
 def load_filepaths_and_text(filename, split="|"):
@@ -192,3 +199,31 @@ def to_gpu(x):
     if torch.cuda.is_available():
         x = x.cuda(non_blocking=True)
     return torch.autograd.Variable(x)
+
+
+def plot_data(data, figsize=(16, 4)):
+    fig, axes = plt.subplots(1, len(data), figsize=figsize)
+    for i in range(len(data)):
+        axes[i].imshow(data[i], aspect='auto', origin='bottom',
+                       interpolation='none')
+
+
+def test(model, step_num, loss):
+    model.eval()
+
+    text = "You, me, or nobody is gonna hit as hard as life. But it is not about how hard you hit. It’s about how hard you can get hit and keep moving forward."
+    sequence = np.array(text_to_sequence(text))[None, :]
+    sequence = torch.autograd.Variable(torch.from_numpy(sequence)).cuda().long()
+    with torch.no_grad():
+        mel_outputs, mel_outputs_postnet, _, alignments = model.inference(sequence)
+    plot_data((mel_outputs.float().data.cpu().numpy()[0],
+               mel_outputs_postnet.float().data.cpu().numpy()[0],
+               alignments.float().data.cpu().numpy()[0].T))
+    title = 'step={0}, loss={1:.5f}'.format(step_num, loss)
+    plt.title(title)
+    filename = 'images/temp.jpg'
+    plt.savefig(filename)
+    img = cv.imread(filename)
+    img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+    img = img / 255.
+    return img
