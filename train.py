@@ -65,7 +65,7 @@ def train_net(args):
                            criterion=criterion,
                            epoch=epoch,
                            logger=logger)
-        writer.add_scalar('Train_Loss', train_loss, epoch)
+        writer.add_scalar('model/train_loss', train_loss, epoch)
 
         lr = optimizer.lr
         print('\nLearning rate: {}'.format(lr))
