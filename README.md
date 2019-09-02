@@ -29,7 +29,7 @@ $ tensorboard --logdir runs
 ```
 
 ### Demo
-Generate mel-spectrogram for text "Waveglow is really awesome!"
+Generate mel-spectrogram for text "You, me, or nobody is gonna hit as hard as life. But it is not about how hard you hit. It’s about how hard you can get hit and keep moving forward."
 ```bash
 $ python demo.py
 ```
